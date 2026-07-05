@@ -79,19 +79,31 @@ Para executar o ambiente de desenvolvimento do **SIGE Backend**, certifique-se d
 npm install
 ```
 
-### 2. Iniciar Banco PostgreSQL no Docker
+### 2. Configurar Variáveis de Ambiente (.env)
+Crie o arquivo `.env` na raiz do projeto a partir do modelo `.env.example`:
+
+```bash
+# Linux / macOS / Bash
+cp .env.example .env
+
+# Windows (PowerShell)
+Copy-Item .env.example .env
+```
+*Certifique-se de que o arquivo `.env` exista na raiz do projeto antes de iniciar o banco e a aplicação.*
+
+### 3. Iniciar Banco PostgreSQL no Docker
 ```bash
 docker compose up -d
 ```
 
-### 3. Rodar Migrações e Seeds de Teste
+### 4. Rodar Migrações e Seeds de Teste
 ```bash
 npm run prisma:generate
 npm run prisma:migrate:dev
 npm run seed
 ```
 
-### 4. Iniciar o Servidor de Desenvolvimento
+### 5. Iniciar o Servidor de Desenvolvimento
 ```bash
 npm run start:dev
 ```
