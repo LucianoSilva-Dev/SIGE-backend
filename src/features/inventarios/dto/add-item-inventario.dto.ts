@@ -15,10 +15,6 @@ export const AddItemInventarioSchema = z
       .enum(['EXCELENTE', 'BOM', 'REGULAR', 'RUIM', 'INUTILIZADO'])
       .describe('Condição física inicial'),
     observacoes: z.string().optional().describe('Observações técnicas sobre o item'),
-    fotoUrls: z
-      .array(z.string().url())
-      .optional()
-      .describe('Lista de URLs das imagens enviadas como evidência'),
   })
   .meta({ id: 'AddItemInventario' });
 

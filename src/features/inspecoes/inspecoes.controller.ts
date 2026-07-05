@@ -14,7 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodResponse } from 'nestjs-zod';
 import { CreateInspecaoDto } from './dto/create-inspecao.dto';
 import { InspecaoDto } from './dto/inspecao-response.dto';
@@ -33,6 +33,24 @@ export class InspecoesController {
     summary: 'Registrar Inspeção Periódica',
     description:
       'Registra uma inspeção em um equipamento. Permite o upload de evidências fotográficas ao abrir um chamado corretivo (condição RUIM ou INUTILIZADO).',
+  })
+  @ApiBody({
+    description: 'Dados da inspeção e evidências fotográficas (opcional)',
+    schema: {
+      type: 'object',
+      properties: {
+        equipamentoId: { type: 'string', format: 'uuid' },
+        condicaoEncontrada: { type: 'string' },
+        statusOperacional: { type: 'string' },
+        observacoes: { type: 'string' },
+        gerarChamado: { type: 'boolean' },
+        descricaoChamado: { type: 'string' },
+        fotos: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
   })
   @ZodResponse({
     status: 201,

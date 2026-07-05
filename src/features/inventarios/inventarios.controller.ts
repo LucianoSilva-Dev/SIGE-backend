@@ -3,8 +3,9 @@ import {
   validationErrorSchema,
 } from '@common/constants/api-response-schemas';
 import { CurrentUser, UserPayload } from '@common/decorators/current-user.decorator';
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Patch, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodResponse } from 'nestjs-zod';
 import { AddItemInventarioDto } from './dto/add-item-inventario.dto';
 import { AprovarRejeitarInventarioDto } from './dto/aprovar-rejeitar-inventario.dto';
@@ -38,9 +39,30 @@ export class InventariosController {
   }
 
   @Post(':id/itens')
+  @UseInterceptors(FilesInterceptor('fotos'))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Adicionar Item ao Inventário',
     description: 'Adiciona um equipamento/item ao lote de inventário em elaboração.',
+  })
+  @ApiBody({
+    description: 'Dados do item e imagens (opcional)',
+    schema: {
+      type: 'object',
+      properties: {
+        tipoEquipamentoId: { type: 'string', format: 'uuid' },
+        patrimonio: { type: 'string' },
+        numeroSerie: { type: 'string' },
+        marca: { type: 'string' },
+        modelo: { type: 'string' },
+        condicao: { type: 'string' },
+        observacoes: { type: 'string' },
+        fotos: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
   })
   @ZodResponse({
     status: 201,
@@ -61,8 +83,9 @@ export class InventariosController {
     @Param('id') id: string,
     @Body() dto: AddItemInventarioDto,
     @CurrentUser() user: UserPayload,
+    @UploadedFiles() fotos?: Express.Multer.File[],
   ) {
-    return this.inventariosService.addItem(id, dto, user);
+    return this.inventariosService.addItem(id, dto, user, fotos);
   }
 
   @Get()

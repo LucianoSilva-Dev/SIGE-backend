@@ -4,9 +4,12 @@ import {
 } from '@common/constants/api-response-schemas';
 import { CurrentUser, UserPayload } from '@common/decorators/current-user.decorator';
 import {
+  Body as NestBody,
   Controller as NestController,
   Get as NestGet,
   Param as NestParam,
+  Patch as NestPatch,
+  Post as NestPost,
   Query as NestQuery,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -17,6 +20,7 @@ import {
   TipoEquipamentoDto,
 } from './dto/equipamento-response.dto';
 import { QueryEquipamentoDto } from './dto/query-equipamento.dto';
+import { CreateEquipamentoDto } from './dto/create-equipamento.dto';
 import { EquipamentosService } from './equipamentos.service';
 
 @ApiTags('Equipamentos')
@@ -24,6 +28,54 @@ import { EquipamentosService } from './equipamentos.service';
 @ApiBearerAuth()
 export class EquipamentosController {
   constructor(private readonly equipamentosService: EquipamentosService) {}
+
+  @NestPost()
+  @ApiOperation({
+    summary: 'Cadastrar Novo Equipamento',
+    description: 'Cadastra um equipamento novo e designa para qual escola será enviado. Apenas usuários da SEDUC.',
+  })
+  @ZodResponse({
+    status: 201,
+    type: EquipamentoDto,
+    description: 'Equipamento cadastrado com sucesso (Pendente de recebimento)',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Erro de validação',
+    schema: validationErrorSchema,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso negado (Somente SEDUC)',
+    schema: businessLogicErrorSchema,
+  })
+  async create(@NestBody() dto: CreateEquipamentoDto, @CurrentUser() user: UserPayload) {
+    return this.equipamentosService.create(dto, user);
+  }
+
+  @NestPatch(':id/confirmar-recebimento')
+  @ApiOperation({
+    summary: 'Confirmar Recebimento do Equipamento',
+    description: 'O diretor da escola de destino confirma o recebimento do equipamento, ativando-o no sistema e gerando seu QR Code.',
+  })
+  @ZodResponse({
+    status: 200,
+    type: EquipamentoDto,
+    description: 'Recebimento confirmado com sucesso',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Acesso negado (Somente Diretor Escolar)',
+    schema: businessLogicErrorSchema,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Equipamento não encontrado',
+    schema: businessLogicErrorSchema,
+  })
+  async confirmarRecebimento(@NestParam('id') id: string, @CurrentUser() user: UserPayload) {
+    return this.equipamentosService.confirmarRecebimento(id, user);
+  }
 
   @NestGet()
   @ApiOperation({

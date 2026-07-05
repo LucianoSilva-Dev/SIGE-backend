@@ -5,10 +5,22 @@ import { Injectable } from '@nestjs/common';
 import { AddItemInventarioDto } from './dto/add-item-inventario.dto';
 import { AprovarRejeitarInventarioDto } from './dto/aprovar-rejeitar-inventario.dto';
 import { CreateInventarioDto } from './dto/create-inventario.dto';
+import { ConfigService } from '@config/index';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class InventariosService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly uploadDir = join(process.cwd(), 'uploads');
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    if (!existsSync(this.uploadDir)) {
+      mkdirSync(this.uploadDir, { recursive: true });
+    }
+  }
 
   private isSeduc(user: UserPayload): boolean {
     return (
@@ -50,7 +62,7 @@ export class InventariosService {
     });
   }
 
-  async addItem(inventarioId: string, dto: AddItemInventarioDto, user: UserPayload) {
+  async addItem(inventarioId: string, dto: AddItemInventarioDto, user: UserPayload, files?: Express.Multer.File[]) {
     const inventario = await this.prisma.inventario.findUnique({
       where: { id: inventarioId },
     });
@@ -90,20 +102,38 @@ export class InventariosService {
       },
     });
 
-    if (dto.fotoUrls && dto.fotoUrls.length > 0) {
-      await Promise.all(
-        dto.fotoUrls.map((url) =>
-          this.prisma.foto.create({
-            data: {
-              url,
-              tipo: 'INVENTARIO',
-              referenciaId: item.id,
-              inventarioId,
-              enviadoPorId: user.id,
-            },
-          }),
-        ),
-      );
+    if (files && files.length > 0) {
+      const port = this.configService.get<number>('PORT') ?? 3000;
+      const host = this.configService.get<string>('HOST') ?? 'localhost';
+      const baseUrl = `http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`;
+
+      for (const file of files) {
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          throw AppException.badRequest(
+            `Formato de imagem inválido (${file.originalname}). Suportados: ${allowedMimeTypes.join(', ')}`,
+            'INVALID_MIME_TYPE',
+          );
+        }
+
+        const ext = file.originalname.split('.').pop() || 'webp';
+        const filename = `evidence-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+        const filePath = join(this.uploadDir, filename);
+
+        writeFileSync(filePath, file.buffer);
+
+        const url = `${baseUrl}/public/uploads/${filename}`;
+
+        await this.prisma.foto.create({
+          data: {
+            url,
+            tipo: 'INVENTARIO',
+            referenciaId: item.id,
+            inventarioId,
+            enviadoPorId: user.id,
+          },
+        });
+      }
     }
 
     return item;
