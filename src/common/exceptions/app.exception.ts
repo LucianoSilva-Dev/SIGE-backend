@@ -8,7 +8,11 @@ export type AppErrorCode =
   | 'DUPLICATE_ENTRY'
   | 'FORBIDDEN'
   | 'VALIDATION_ERROR'
-  | 'INTERNAL_ERROR';
+  | 'BAD_REQUEST'
+  | 'CONFLICT'
+  | 'UNAUTHORIZED'
+  | 'INTERNAL_ERROR'
+  | (string & {});
 
 export interface IAppExceptionResponse {
   statusCode: number;
@@ -25,6 +29,18 @@ export class AppException extends Error {
     this.name = 'AppException';
     this.statusCode = statusCode;
     this.errorCode = errorCode;
+  }
+
+  static badRequest(message: string, errorCode: AppErrorCode = 'BAD_REQUEST'): AppException {
+    return new AppException(HttpStatus.BAD_REQUEST, errorCode, message);
+  }
+
+  static conflict(message: string, errorCode: AppErrorCode = 'CONFLICT'): AppException {
+    return new AppException(HttpStatus.CONFLICT, errorCode, message);
+  }
+
+  static unauthorized(message?: string): AppException {
+    return new AppException(HttpStatus.UNAUTHORIZED, 'UNAUTHORIZED', message ?? 'Não autorizado.');
   }
 
   static emailNotVerified(message?: string): AppException {

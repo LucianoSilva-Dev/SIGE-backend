@@ -37,6 +37,10 @@ async function bootstrap() {
     }),
   );
 
+  const express = await import('express');
+  const { join } = await import('path');
+  app.use('/public/uploads', express.static(join(process.cwd(), 'uploads')));
+
   const betterAuthSecret = configService.get<string>('BETTER_AUTH_SECRET');
   if (betterAuthSecret) {
     app.use(cookieParser(betterAuthSecret));

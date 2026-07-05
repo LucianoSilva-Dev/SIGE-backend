@@ -62,20 +62,8 @@ export function shouldEnableDocs(options?: { environment?: string; docsEnabled?:
   return options?.docsEnabled !== false;
 }
 
-export function getHelmetOptions(environment = process.env.ENVIRONMENT ?? process.env.NODE_ENV) {
-  if (isProductionEnvironment(environment)) {
-    return {};
-  }
-
+export function getHelmetOptions(_environment = process.env.ENVIRONMENT ?? process.env.NODE_ENV) {
   return {
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:'],
-        connectSrc: ["'self'"],
-      },
-    },
+    contentSecurityPolicy: false,
   };
 }
