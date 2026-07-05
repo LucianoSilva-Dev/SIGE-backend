@@ -15,6 +15,28 @@ const sessionCookieAttributes = buildSessionCookieAttributes();
 const _auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
 
+  user: {
+    additionalFields: {
+      matricula: {
+        type: 'string',
+        required: false,
+      },
+      cargo: {
+        type: 'string',
+        required: false,
+      },
+      escolaId: {
+        type: 'string',
+        required: false,
+      },
+      ativo: {
+        type: 'boolean',
+        required: false,
+        defaultValue: true,
+      },
+    },
+  },
+
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,

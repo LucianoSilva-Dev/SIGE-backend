@@ -11,6 +11,86 @@ datasource db {
 }
 
 // ============================================
+// ENUMS DO DOMÍNIO SIGE
+// ============================================
+
+enum Cargo {
+  GESTOR_SEDUC
+  ADMINISTRADOR_SEDUC
+  DIRETOR_ESCOLAR
+  TECNICO
+  ESTAGIARIO
+}
+
+enum TipoProprietario {
+  PROPRIO
+  TERCEIRIZADO
+}
+
+enum StatusOperacional {
+  OPERANTE
+  OPERANTE_COM_RESTRICOES
+  AGUARDANDO_REPARO
+  EM_MANUTENCAO
+  INOPERANTE
+  AGUARDANDO_DEVOLUCAO
+  BAIXADO
+  DEVOLVIDO
+}
+
+enum StatusCadastro {
+  PENDENTE
+  EM_ANALISE_DUPLICIDADE
+  APROVADO
+  REJEITADO
+}
+
+enum CondicaoEquipamento {
+  EXCELENTE
+  BOM
+  REGULAR
+  RUIM
+  INUTILIZADO
+}
+
+enum StatusInventario {
+  EM_ELABORACAO
+  AGUARDANDO_APROVACAO_DIRETOR
+  AGUARDANDO_APROVACAO_SEDUC
+  APROVADO
+  REJEITADO
+}
+
+enum StatusChamado {
+  ABERTO
+  EM_ANALISE
+  EM_ATENDIMENTO
+  AGUARDANDO_PECAS
+  RESOLVIDO
+  CANCELADO
+}
+
+enum TipoFoto {
+  EQUIPAMENTO
+  MANUTENCAO
+  CHAMADO
+  INVENTARIO
+}
+
+enum TipoEvento {
+  CADASTRO
+  APROVACAO
+  REPROVACAO
+  MOVIMENTACAO
+  MANUTENCAO_ABERTA
+  MANUTENCAO_CONCLUIDA
+  STATUS_ALTERADO
+  DEVOLUCAO
+  BAIXA
+  CORRECAO_CADASTRAL
+}
+
+// ============================================
 // BETTER AUTH ENTITIES & BASE USER MODELS
 // ============================================
 
@@ -27,9 +107,26 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Campos Adicionais SIGE
+  matricula String? @unique
+  cargo     Cargo?
+  escolaId  String? @map("escola_id")
+  ativo     Boolean @default(true)
+
+  // Relações Better Auth
   sessions Session[]
   accounts Account[]
 
+  // Relações Domínio SIGE
+  escola             Escola?                @relation(fields: [escolaId], references: [id], onDelete: SetNull)
+  inspecoes          Inspecao[]
+  chamados           ChamadoCorretivo[]
+  fotos              Foto[]
+  movimentacoes      Movimentacao[]
+  historicos         HistoricoEquipamento[]
+  inventariosCriados Inventario[]
+
+  @@index([escolaId])
   @@map("user")
 }
 
@@ -79,4 +176,252 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// ============================================
+// MODELOS DE DOMÍNIO DO SIGE
+// ============================================
+
+model Escola {
+  id         String   @id @default(uuid(7))
+  nome       String
+  codigoInep String?  @unique @map("codigo_inep")
+  endereco   String?
+  telefone   String?
+  email      String?
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  usuarios             User[]
+  equipamentos         Equipamento[]
+  inventarios          Inventario[]
+  movimentacoesOrigem  Movimentacao[] @relation("EscolaOrigem")
+  movimentacoesDestino Movimentacao[] @relation("EscolaDestino")
+
+  @@map("escola")
+}
+
+model Proprietario {
+  id          String           @id @default(uuid(7))
+  nome        String
+  tipo        TipoProprietario
+  telefone    String?
+  email       String?
+  observacoes String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  equipamentos Equipamento[]
+
+  @@map("proprietario")
+}
+
+model TipoEquipamento {
+  id        String   @id @default(uuid(7))
+  nome      String   @unique
+  descricao String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  equipamentos            Equipamento[]
+  itensInventario         ItemInventario[]
+  configuracoesManutencao ConfiguracaoManutencao[]
+
+  @@map("tipo_equipamento")
+}
+
+model ConfiguracaoManutencao {
+  id                String          @id @default(uuid(7))
+  tipoEquipamentoId String          @unique @map("tipo_equipamento_id")
+  intervaloDias     Int             @map("intervalo_dias")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  tipoEquipamento TipoEquipamento @relation(fields: [tipoEquipamentoId], references: [id], onDelete: Cascade)
+
+  @@map("configuracao_manutencao")
+}
+
+model Equipamento {
+  id                String              @id @default(uuid(7))
+  patrimonio        String?             @unique
+  numeroSerie       String?             @map("numero_serie")
+  tipoEquipamentoId String              @map("tipo_equipamento_id")
+  proprietarioId    String              @map("proprietario_id")
+  marca             String
+  modelo            String
+  dataAquisicao     DateTime            @map("data_aquisicao")
+  dataDevolucao     DateTime?           @map("data_devolucao")
+  escolaAtualId     String              @map("escola_atual_id")
+  qrCode            String?             @unique @map("qr_code")
+  statusOperacional StatusOperacional   @default(OPERANTE) @map("status_operacional")
+  statusCadastro    StatusCadastro      @default(APROVADO) @map("status_cadastro")
+  condicao          CondicaoEquipamento @default(BOM)
+  observacoes       String?
+  ativo             Boolean             @default(true)
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  tipoEquipamento TipoEquipamento        @relation(fields: [tipoEquipamentoId], references: [id])
+  proprietario    Proprietario           @relation(fields: [proprietarioId], references: [id])
+  escolaAtual     Escola                 @relation(fields: [escolaAtualId], references: [id])
+  inspecoes       Inspecao[]
+  chamados        ChamadoCorretivo[]
+  historico       HistoricoEquipamento[]
+  movimentacoes   Movimentacao[]
+  fotos           Foto[]
+
+  @@index([escolaAtualId])
+  @@index([tipoEquipamentoId])
+  @@index([proprietarioId])
+  @@map("equipamento")
+}
+
+model Inventario {
+  id                    String           @id @default(uuid(7))
+  escolaId              String           @map("escola_id")
+  criadoPorId           String           @map("criado_por_id")
+  status                StatusInventario @default(EM_ELABORACAO)
+  justificativaRejeicao String?          @map("justificativa_rejeicao")
+  enviadoDiretorEm      DateTime?        @map("enviado_diretor_em")
+  aprovadoDiretorEm     DateTime?        @map("aprovado_diretor_em")
+  enviadoSeducEm        DateTime?        @map("enviado_seduc_em")
+  aprovadoSeducEm       DateTime?        @map("aprovado_seduc_em")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  escola    Escola           @relation(fields: [escolaId], references: [id])
+  criadoPor User             @relation(fields: [criadoPorId], references: [id])
+  itens     ItemInventario[]
+  fotos     Foto[]
+
+  @@index([escolaId])
+  @@index([criadoPorId])
+  @@map("inventario")
+}
+
+model ItemInventario {
+  id                String              @id @default(uuid(7))
+  inventarioId      String              @map("inventario_id")
+  patrimonio        String?
+  numeroSerie       String?             @map("numero_serie")
+  tipoEquipamentoId String              @map("tipo_equipamento_id")
+  marca             String
+  modelo            String
+  condicao          CondicaoEquipamento
+  observacoes       String?
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  inventario      Inventario      @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+  tipoEquipamento TipoEquipamento @relation(fields: [tipoEquipamentoId], references: [id])
+
+  @@index([inventarioId])
+  @@map("item_inventario")
+}
+
+model Inspecao {
+  id                 String              @id @default(uuid(7))
+  equipamentoId      String              @map("equipamento_id")
+  usuarioId          String              @map("usuario_id")
+  dataRealizacao     DateTime            @default(now()) @map("data_realizacao")
+  condicaoEncontrada CondicaoEquipamento @map("condicao_encontrada")
+  observacoes        String?
+  aprovadoDiretor    Boolean?            @default(false) @map("aprovado_diretor")
+  aprovadoEm         DateTime?           @map("aprovado_em")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  equipamento Equipamento        @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+  usuario     User               @relation(fields: [usuarioId], references: [id])
+  fotos       Foto[]
+  chamados    ChamadoCorretivo[]
+
+  @@index([equipamentoId])
+  @@index([usuarioId])
+  @@map("inspecao")
+}
+
+model ChamadoCorretivo {
+  id            String        @id @default(uuid(7))
+  equipamentoId String        @map("equipamento_id")
+  abertoPorId   String        @map("aberto_por_id")
+  inspecaoId    String?       @map("inspecao_id")
+  descricao     String
+  solucao       String?
+  status        StatusChamado @default(ABERTO)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  encerradoEm   DateTime?     @map("encerrado_em")
+
+  equipamento Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+  abertoPor   User        @relation(fields: [abertoPorId], references: [id])
+  inspecao    Inspecao?   @relation(fields: [inspecaoId], references: [id], onDelete: SetNull)
+  fotos       Foto[]
+
+  @@index([equipamentoId])
+  @@index([abertoPorId])
+  @@map("chamado_corretivo")
+}
+
+model Foto {
+  id            String   @id @default(uuid(7))
+  url           String
+  tipo          TipoFoto
+  referenciaId  String   @map("referencia_id")
+  equipamentoId String?  @map("equipamento_id")
+  inspecaoId    String?  @map("inspecao_id")
+  chamadoId     String?  @map("chamado_id")
+  inventarioId  String?  @map("inventario_id")
+  enviadoPorId  String   @map("enviado_por_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  enviadoPor  User              @relation(fields: [enviadoPorId], references: [id])
+  equipamento Equipamento?      @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+  inspecao    Inspecao?         @relation(fields: [inspecaoId], references: [id], onDelete: Cascade)
+  chamado     ChamadoCorretivo? @relation(fields: [chamadoId], references: [id], onDelete: Cascade)
+  inventario  Inventario?       @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+
+  @@index([referenciaId])
+  @@index([enviadoPorId])
+  @@map("foto")
+}
+
+model Movimentacao {
+  id               String   @id @default(uuid(7))
+  equipamentoId    String   @map("equipamento_id")
+  escolaOrigemId   String?  @map("escola_origem_id")
+  escolaDestinoId  String?  @map("escola_destino_id")
+  usuarioId        String   @map("usuario_id")
+  motivo           String
+  observacoes      String?
+  dataMovimentacao DateTime @default(now()) @map("data_movimentacao")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  equipamento   Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+  escolaOrigem  Escola?     @relation("EscolaOrigem", fields: [escolaOrigemId], references: [id])
+  escolaDestino Escola?     @relation("EscolaDestino", fields: [escolaDestinoId], references: [id])
+  usuario       User        @relation(fields: [usuarioId], references: [id])
+
+  @@index([equipamentoId])
+  @@index([usuarioId])
+  @@map("movimentacao")
+}
+
+model HistoricoEquipamento {
+  id            String     @id @default(uuid(7))
+  equipamentoId String     @map("equipamento_id")
+  usuarioId     String     @map("usuario_id")
+  tipoEvento    TipoEvento @map("tipo_evento")
+  descricao     String
+  dataEvento    DateTime   @default(now()) @map("data_evento")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  equipamento Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+  usuario     User        @relation(fields: [usuarioId], references: [id])
+
+  @@index([equipamentoId])
+  @@index([usuarioId])
+  @@map("historico_equipamento")
 }

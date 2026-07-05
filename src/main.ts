@@ -1,3 +1,4 @@
+import { seedDatabase } from '@common/seed-database';
 import { setupAdmin } from '@common/setup-admin';
 import { LoggerService } from '@core/logger/logger.service';
 import { NestFactory } from '@nestjs/core';
@@ -47,6 +48,10 @@ async function bootstrap() {
 
   if (configService.get<boolean>('ADMIN_SETUP')) {
     await setupAdmin();
+  }
+
+  if (configService.get<boolean>('SEED_ON_START')) {
+    await seedDatabase();
   }
 
   await app.listen(port, host);

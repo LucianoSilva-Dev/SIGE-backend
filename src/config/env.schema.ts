@@ -44,6 +44,12 @@ const envSchema = z
     ADMIN_NAME: z.string().optional(),
     ADMIN_EMAIL: z.string().optional(),
     ADMIN_PASSWORD: z.string().optional(),
+
+    // Seeding Flag
+    SEED_ON_START: z
+      .preprocess((val) => val === 'true', z.boolean())
+      .optional()
+      .default(false),
   })
   .refine(
     (data) => {

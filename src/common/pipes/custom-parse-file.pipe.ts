@@ -199,7 +199,9 @@ class EncodingFixParseFilePipe extends ParseFilePipe {
   async transform(value: MulterFile): Promise<MulterFile> {
     if (value) {
       if (Array.isArray(value)) {
-        value.forEach((file) => this.fixEncoding(file));
+        value.forEach((file) => {
+          this.fixEncoding(file);
+        });
       } else {
         this.fixEncoding(value);
       }
@@ -240,4 +242,4 @@ export function CustomParseFilePipe(params?: CustomParseFilePipeParams) {
 }
 
 // Re-exporta os validators customizados para uso direto se necessário
-export { FriendlyMaxFileSizeValidator, FriendlyFileTypeValidator };
+export { FriendlyFileTypeValidator, FriendlyMaxFileSizeValidator };

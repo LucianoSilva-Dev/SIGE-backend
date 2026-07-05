@@ -16,7 +16,9 @@
     "format": "biome format --write .",
     "prisma:generate": "prisma generate --schema=src/core/prisma/schema.prisma",
     "prisma:migrate:dev": "prisma migrate dev --schema=src/core/prisma/schema.prisma",
+    "prisma:seed": "prisma db seed --schema=src/core/prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=src/core/prisma/schema.prisma",
+    "seed": "tsx --env-file=.env src/core/prisma/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest run --watch"
   },
@@ -66,6 +68,7 @@
     "zod": "^4.1.11"
   },
   "prisma": {
-    "schema": "src/core/prisma/schema.prisma"
+    "schema": "src/core/prisma/schema.prisma",
+    "seed": "tsx --env-file=.env src/core/prisma/seed.ts"
   }
 }
